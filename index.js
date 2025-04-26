@@ -1,5 +1,5 @@
 const express = require('express');
-const ytdl = require('ytdl-core');
+const playdl = require('play-dl');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -18,15 +18,11 @@ app.get('/download', async (req, res) => {
   if (!videoUrl) return res.send('No URL provided!');
 
   try {
-    const info = await ytdl.getInfo(videoUrl);
-    const title = info.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '_');
+    const info = await playdl.video_info(videoUrl);
+    const stream = await playdl.stream_from_info(info);
 
-    res.header('Content-Disposition', `attachment; filename="${title}.mp4"`);
-
-    ytdl(videoUrl, {
-      format: 'mp4',
-      quality: 'highestvideo',
-    }).pipe(res);
+    res.header('Content-Disposition', `attachment; filename="video.mp4"`);
+    stream.stream.pipe(res);
 
   } catch (err) {
     console.error(err);
