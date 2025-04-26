@@ -1,5 +1,5 @@
 const express = require('express');
-const { spawn } = require('child_process');
+const ytdl = require('ytdl-core');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -13,27 +13,25 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.get('/download', (req, res) => {
+app.get('/download', async (req, res) => {
   const videoUrl = req.query.url;
-  if (!videoUrl) {
-    return res.send('No URL provided!');
+  if (!videoUrl) return res.send('No URL provided!');
+
+  try {
+    const info = await ytdl.getInfo(videoUrl);
+    const title = info.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '_');
+
+    res.header('Content-Disposition', `attachment; filename="${title}.mp4"`);
+
+    ytdl(videoUrl, {
+      format: 'mp4',
+      quality: 'highestvideo',
+    }).pipe(res);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Failed to download video.');
   }
-
-  // نام فایل خروجی رو تعیین کنیم
-  res.setHeader('Content-Disposition', 'attachment; filename="video.mp4"');
-
-  // yt-dlp رو اجرا کن
-  const downloader = spawn('yt-dlp', ['-o', '-', videoUrl]);
-
-  downloader.stdout.pipe(res);
-
-  downloader.stderr.on('data', (data) => {
-    console.error(`yt-dlp error: ${data}`);
-  });
-
-  downloader.on('close', (code) => {
-    console.log(`Download finished with code ${code}`);
-  });
 });
 
 app.listen(PORT, () => {
